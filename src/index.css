@@ -1,0 +1,184 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap');
+
+@theme {
+  /* Force sRGB compatibility for common colors used in receipts to avoid html2canvas oklch/oklab errors */
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-transparent: transparent;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+  --color-blue-950: #172554;
+
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
+  --color-amber-950: #451a03;
+}
+
+* {
+  font-family: 'Cairo', Tahoma, sans-serif;
+}
+
+/* Specific Arabic text shaping for export and display */
+.receipt-container,
+.receipt-container *,
+#printable-statement-area,
+#printable-statement-area * {
+  direction: rtl !important;
+  text-align: right !important;
+  font-feature-settings: "arab" on, "kern" on !important;
+  font-variant-ligatures: common-ligatures !important;
+  letter-spacing: 0 !important;
+  word-spacing: normal !important;
+  unicode-bidi: isolate !important;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    font-family: 'Cairo', Tahoma, sans-serif !important;
+  }
+
+  /* Hide app navigation, sidebars, headers, and controls when printing */
+  aside,
+  header,
+  nav,
+  footer,
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  /* Expand modal overlay to cover print area cleanly */
+  .fixed.inset-0 {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    height: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .fixed.inset-0 > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Dedicated custom print class and receipt container rules */
+  .receipt-print-page,
+  .receipt-container {
+    width: 210mm !important;
+    height: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    margin: 0 auto !important;
+    padding: 8mm !important;
+    background: #ffffff !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  /* Account statement print area layout */
+  #printable-statement-area {
+    display: block !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 6mm !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  #printable-statement-area * {
+    visibility: visible !important;
+    letter-spacing: 0 !important;
+    word-spacing: normal !important;
+    font-feature-settings: "arab" on, "kern" on !important;
+    font-variant-ligatures: common-ligatures !important;
+  }
+
+  /* Typography optimization for print */
+  h1, h2, h3, h4, h5, h6, p, span, div, td, th {
+    font-family: 'Cairo', Tahoma, sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    letter-spacing: 0 !important;
+  }
+
+  /* Prevent row breaking across pages where possible */
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+

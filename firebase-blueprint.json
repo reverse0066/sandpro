@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "lastLogin": {
+          "type": "string",
+          "description": "Last login timestamp"
+        }
+      },
+      "required": ["email"]
+    },
+    "OrganizationSettings": {
+      "title": "OrganizationSettings",
+      "description": "Organization settings for receipt voucher customization",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "taxNo": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "crNo": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "accentColor": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "preferredTemplate": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "logo": {
+          "type": "string",
+          "maxLength": 1000000
+        },
+        "signature": {
+          "type": "string",
+          "maxLength": 1000000
+        },
+        "stamp": {
+          "type": "string",
+          "maxLength": 1000000
+        }
+      },
+      "required": ["name", "taxNo", "crNo", "address", "phone"]
+    },
+    "Receipt": {
+      "title": "Receipt",
+      "description": "Receipt voucher record",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "receiptNo": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "customerName": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "amount": {
+          "type": "number"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "invoiceNo": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "referenceNo": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 100
+        }
+      },
+      "required": ["userId", "receiptNo", "date", "customerName", "amount", "paymentMethod"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Stores user profile data"
+    },
+    "settings/{userId}": {
+      "schema": "OrganizationSettings",
+      "description": "Stores user organization settings"
+    },
+    "receipts/{receiptId}": {
+      "schema": "Receipt",
+      "description": "Stores user receipt vouchers"
+    }
+  }
+}

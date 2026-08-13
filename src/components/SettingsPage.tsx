@@ -31,12 +31,14 @@ export default function SettingsPage({ settings, onSave }: SettingsPageProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isQuickSigOpen, setIsQuickSigOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState<{
-    status: 'ok' | 'quota_exceeded' | 'high_demand' | 'missing_key' | 'error' | 'idle';
+    status: 'ok' | 'quota_exceeded' | 'high_demand' | 'missing_key' | 'server_offline' | 'network_error' | 'error' | 'idle';
     isQuotaAvailable?: boolean;
     message?: string;
+    diagnostic?: string;
     checkedAt?: string;
   }>({ status: 'idle' });
   const [isCheckingAi, setIsCheckingAi] = useState(false);
+  const [showDeploymentHelp, setShowDeploymentHelp] = useState(false);
 
   useEffect(() => {
     setFormData(settings);
@@ -46,13 +48,43 @@ export default function SettingsPage({ settings, onSave }: SettingsPageProps) {
     setIsCheckingAi(true);
     try {
       const res = await fetch('/api/check-ai-status');
-      const data = await res.json();
-      setAiStatus(data);
+      
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok && res.status === 404) {
+        setAiStatus({
+          status: 'server_offline',
+          isQuotaAvailable: false,
+          message: 'خادم المعالجة الخلفي غير متصل (خطأ 404 Not Found).',
+          diagnostic: 'تم رفع واجهة التطبيق فقط كصفحات ثابتة (Static Web Files) دون تشغيل خادم Node.js الخلفي المسؤول عن استخراج الفواتير والاتصال بالذكاء الاصطناعي.',
+          checkedAt: new Date().toISOString()
+        });
+        return;
+      }
+
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        setAiStatus({
+          ...data,
+          checkedAt: data.checkedAt || new Date().toISOString()
+        });
+      } else {
+        // Returned HTML (e.g. 404/502 default page from Nginx/Apache/Static Host)
+        setAiStatus({
+          status: 'server_offline',
+          isQuotaAvailable: false,
+          message: 'المسار البرمجي (/api/check-ai-status) لم يرجع استجابة خادم Node.js.',
+          diagnostic: 'تأكد من تشغيل الخادم الخلفي (npm start) وتوجيه مسارات /api/* إلى الخادم في موقعك الخارجي.',
+          checkedAt: new Date().toISOString()
+        });
+      }
     } catch (err: any) {
+      console.error('Error checking AI status:', err);
       setAiStatus({
-        status: 'error',
+        status: 'network_error',
         isQuotaAvailable: false,
-        message: 'تعذر الاتصال بخادم التطبيق لفحص الرصيد.'
+        message: 'تعذر الاتصال بخادم التطبيق لفحص الرصيد.',
+        diagnostic: 'فشل الاتصال بالخادم عبر الشبكة (Failed to fetch). تأكد من تشغيل خادم التطبيق (Node.js) وسلامة إعدادات النطاق / المنفذ.',
+        checkedAt: new Date().toISOString()
       });
     } finally {
       setIsCheckingAi(false);
@@ -185,20 +217,61 @@ export default function SettingsPage({ settings, onSave }: SettingsPageProps) {
                     ? 'bg-rose-950/80 border-rose-500/60 text-rose-100 font-bold'
                     : aiStatus.status === 'high_demand'
                     ? 'bg-amber-950/70 border-amber-500/50 text-amber-100'
+                    : aiStatus.status === 'missing_key' || aiStatus.status === 'server_offline' || aiStatus.status === 'network_error'
+                    ? 'bg-amber-950/80 border-amber-500/60 text-amber-100'
                     : 'bg-slate-800 border-slate-700 text-slate-300'
                 }`}>
                   <div className="flex items-start gap-3">
                     {aiStatus.status === 'ok' && <CheckCircle2 size={20} className="text-emerald-400 shrink-0 mt-0.5" />}
                     {aiStatus.status === 'quota_exceeded' && <AlertTriangle size={20} className="text-rose-400 shrink-0 mt-0.5 animate-pulse" />}
                     {aiStatus.status === 'high_demand' && <Zap size={20} className="text-amber-400 shrink-0 mt-0.5" />}
-                    {aiStatus.status === 'error' && <AlertTriangle size={20} className="text-slate-400 shrink-0 mt-0.5" />}
-                    <div className="space-y-1 w-full">
+                    {(aiStatus.status === 'missing_key' || aiStatus.status === 'server_offline' || aiStatus.status === 'network_error' || aiStatus.status === 'error') && (
+                      <AlertTriangle size={20} className="text-amber-400 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1.5 w-full">
                       <div className="font-bold text-sm">{aiStatus.message}</div>
+                      
+                      {aiStatus.diagnostic && (
+                        <div className="text-[11px] text-slate-300 font-normal bg-black/30 p-2.5 rounded-lg border border-white/10 mt-1">
+                          {aiStatus.diagnostic}
+                        </div>
+                      )}
+
                       {aiStatus.status === 'quota_exceeded' && (
                         <div className="text-[11px] text-rose-300 font-normal mt-1 pt-1 border-t border-rose-800/50">
                           السبب: تجاوز الحد الأقصى المسموح للطلبات أو نفاد الرصيد المتاح لحساب الـ API.
                         </div>
                       )}
+
+                      {(aiStatus.status === 'server_offline' || aiStatus.status === 'missing_key' || aiStatus.status === 'network_error') && (
+                        <div className="pt-2 border-t border-white/10">
+                          <button
+                            type="button"
+                            onClick={() => setShowDeploymentHelp(!showDeploymentHelp)}
+                            className="text-[11px] text-blue-300 underline hover:text-blue-200 cursor-pointer font-bold"
+                          >
+                            {showDeploymentHelp ? 'إخفاء تعليمات الاستضافة الخارجية' : '💡 كيف تقوم بتشغيل التطبيق على موقعك الخارجي بشكل صحيح؟'}
+                          </button>
+
+                          {showDeploymentHelp && (
+                            <div className="mt-2 p-3 bg-slate-950/80 rounded-xl border border-slate-700 text-slate-300 text-[11px] space-y-2 leading-relaxed font-normal">
+                              <p className="font-bold text-white">الخطوات اللازمة عند رفع التطبيق على خادم خارجي:</p>
+                              <ol className="list-decimal list-inside space-y-1 text-slate-300 pr-1">
+                                <li>
+                                  <strong className="text-white">تشغيل خادم Node.js:</strong> هذا التطبيق يحتاج لخادم Node.js لتنفيذ مهام الذكاء الاصطناعي وحماية المفاتيح. شغّل الأمر: <code className="bg-slate-800 px-1 py-0.5 rounded text-amber-300">npm run build && npm start</code>
+                                </li>
+                                <li>
+                                  <strong className="text-white">إضافة مفتاح الـ API:</strong> تأكد من ضبط متغير البيئة <code className="bg-slate-800 px-1 py-0.5 rounded text-amber-300">GEMINI_API_KEY</code> في لوحة تحكم الاستضافة (Environment Variables).
+                                </li>
+                                <li>
+                                  <strong className="text-white">الاستضافات المدعومة:</strong> منصات مثل Google Cloud Run أو Render أو Railway أو VPS أو Docker (وليس الاستضافات الثابتة فقط مثل GitHub Pages).
+                                </li>
+                              </ol>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {aiStatus.checkedAt && (
                         <div className="text-[10px] opacity-75 mt-1">
                           آخر فحص: {new Date(aiStatus.checkedAt).toLocaleTimeString('ar-SA')}

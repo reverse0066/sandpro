@@ -12,6 +12,17 @@ const PORT = 3000;
 // Middleware for parsing JSON with a larger limit for base64 images/PDFs
 app.use(express.json({ limit: '50mb' }));
 
+// Enable CORS for external deployments or custom domains
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Gemini AI initialization helper
 let aiInstance: GoogleGenAI | null = null;
 function getAI() {

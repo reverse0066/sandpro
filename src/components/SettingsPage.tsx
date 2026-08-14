@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Save, Building2, Hash, MapPin, Phone, Image as ImageIcon, CheckCircle2, Eye, PenTool, Sparkles, Printer, Cpu, Activity, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
+import { Save, Building2, Hash, MapPin, Phone, Image as ImageIcon, CheckCircle2, Eye, PenTool, Sparkles, Printer, Cpu, Activity, AlertTriangle, RefreshCw, Zap, ShieldCheck, XCircle, AlertOctagon, Info } from 'lucide-react';
 import { OrganizationSettings, Receipt } from '../types';
 import { ModernTemplate, ProfessionalTemplate, ClassicTemplate, LuxuryTemplate, MinimalTemplate, DaftraTemplate } from './ReceiptTemplates';
 import QuickSignatureModal from './QuickSignatureModal';
@@ -32,6 +32,7 @@ export default function SettingsPage({ settings, onSave }: SettingsPageProps) {
   const [isQuickSigOpen, setIsQuickSigOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState<{
     status: 'ok' | 'quota_exceeded' | 'high_demand' | 'missing_key' | 'server_offline' | 'network_error' | 'error' | 'idle';
+    quotaLevel?: 'sufficient' | 'warning' | 'exhausted';
     isQuotaAvailable?: boolean;
     message?: string;
     diagnostic?: string;
@@ -44,6 +45,11 @@ export default function SettingsPage({ settings, onSave }: SettingsPageProps) {
     setFormData(settings);
   }, [settings]);
 
+  // Auto-check AI quota and health status when opening settings page
+  useEffect(() => {
+    handleCheckAiStatus();
+  }, []);
+
   const handleCheckAiStatus = async () => {
     setIsCheckingAi(true);
     try {
@@ -53,6 +59,7 @@ export default function SettingsPage({ settings, onSave }: SettingsPageProps) {
       if (!res.ok && res.status === 404) {
         setAiStatus({
           status: 'server_offline',
+          quotaLevel: 'warning',
           isQuotaAvailable: false,
           message: 'خادم المعالجة الخلفي غير متصل (خطأ 404 Not Found).',
           diagnostic: 'تم رفع واجهة التطبيق فقط كصفحات ثابتة (Static Web Files) دون تشغيل خادم Node.js الخلفي المسؤول عن استخراج الفواتير والاتصال بالذكاء الاصطناعي.',
@@ -65,12 +72,14 @@ export default function SettingsPage({ settings, onSave }: SettingsPageProps) {
         const data = await res.json();
         setAiStatus({
           ...data,
+          quotaLevel: data.quotaLevel || (data.status === 'ok' ? 'sufficient' : data.status === 'quota_exceeded' ? 'exhausted' : 'warning'),
           checkedAt: data.checkedAt || new Date().toISOString()
         });
       } else {
         // Returned HTML (e.g. 404/502 default page from Nginx/Apache/Static Host)
         setAiStatus({
           status: 'server_offline',
+          quotaLevel: 'warning',
           isQuotaAvailable: false,
           message: 'المسار البرمجي (/api/check-ai-status) لم يرجع استجابة خادم Node.js.',
           diagnostic: 'تأكد من تشغيل الخادم الخلفي (npm start) وتوجيه مسارات /api/* إلى الخادم في موقعك الخارجي.',
@@ -81,6 +90,7 @@ export default function SettingsPage({ settings, onSave }: SettingsPageProps) {
       console.error('Error checking AI status:', err);
       setAiStatus({
         status: 'network_error',
+        quotaLevel: 'warning',
         isQuotaAvailable: false,
         message: 'تعذر الاتصال بخادم التطبيق لفحص الرصيد.',
         diagnostic: 'فشل الاتصال بالخادم عبر الشبكة (Failed to fetch). تأكد من تشغيل خادم التطبيق (Node.js) وسلامة إعدادات النطاق / المنفذ.',
@@ -198,15 +208,87 @@ export default function SettingsPage({ settings, onSave }: SettingsPageProps) {
                     <p className="text-[11px] text-slate-400 mt-0.5">تحقق من توفر رصيد حزمة معالجة واستخراج الفواتير الكبيرة</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCheckAiStatus}
-                  disabled={isCheckingAi}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 shadow-md shadow-blue-900/50 disabled:opacity-50 cursor-pointer"
-                >
-                  <RefreshCw size={14} className={isCheckingAi ? 'animate-spin' : ''} />
-                  <span>{isCheckingAi ? 'جاري الفحص...' : 'فحص الرصيد والحالة'}</span>
-                </button>
+
+                {/* Visual Status Indicator & Action Button Container */}
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {/* Visual Balance Status Component */}
+                  {isCheckingAi ? (
+                    <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-bold animate-pulse shadow-sm">
+                      <RefreshCw size={14} className="animate-spin text-blue-400" />
+                      <span>جاري فحص الرصيد...</span>
+                    </div>
+                  ) : aiStatus.status === 'ok' || aiStatus.quotaLevel === 'sufficient' ? (
+                    <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-sm shadow-emerald-950/50">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+                      </span>
+                      <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
+                      <div className="flex flex-col text-right">
+                        <span className="text-emerald-200">الرصيد كافٍ ومتوفر</span>
+                        <span className="text-[9px] text-emerald-400/90 font-normal">جاهز لاستخراج الفواتير</span>
+                      </div>
+                    </div>
+                  ) : aiStatus.status === 'quota_exceeded' || aiStatus.quotaLevel === 'exhausted' ? (
+                    <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-bold shadow-sm shadow-rose-950/50">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                      </span>
+                      <XCircle size={16} className="text-rose-400 shrink-0 animate-pulse" />
+                      <div className="flex flex-col text-right">
+                        <span className="text-rose-200">الرصيد منفذ (429)</span>
+                        <span className="text-[9px] text-rose-300/90 font-normal">تجاوز حد الاستخدام</span>
+                      </div>
+                    </div>
+                  ) : aiStatus.status === 'high_demand' || aiStatus.quotaLevel === 'warning' || aiStatus.status === 'missing_key' || aiStatus.status === 'server_offline' || aiStatus.status === 'network_error' ? (
+                    <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold shadow-sm shadow-amber-950/50">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
+                      </span>
+                      <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+                      <div className="flex flex-col text-right">
+                        <span className="text-amber-200">
+                          {aiStatus.status === 'high_demand' ? 'ضغط مؤقت (503)' : 'تنبيه اتصال / قرب النفاذ'}
+                        </span>
+                        <span className="text-[9px] text-amber-300/90 font-normal">تحقق من التقرير أدناه</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium">
+                      <Activity size={15} className="text-slate-400" />
+                      <span>في انتظار الفحص</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleCheckAiStatus}
+                    disabled={isCheckingAi}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 shadow-md shadow-blue-900/50 disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw size={14} className={isCheckingAi ? 'animate-spin' : ''} />
+                    <span>{isCheckingAi ? 'جاري الفحص...' : 'إعادة فحص الرصيد'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Color-code Legend Bar */}
+              <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-4 text-[11px] text-slate-400">
+                <span className="font-bold text-slate-300">دلالات حالة الرصيد:</span>
+                <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-sm shadow-emerald-400/50"></span>
+                  أخضر: الرصيد كافٍ ومتوفر
+                </span>
+                <span className="flex items-center gap-1.5 text-amber-400 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 inline-block shadow-sm shadow-amber-400/50"></span>
+                  أصفر: قرب النفاذ أو تنبيه/ضغط
+                </span>
+                <span className="flex items-center gap-1.5 text-rose-400 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-rose-400 inline-block shadow-sm shadow-rose-400/50"></span>
+                  أحمر: الرصيد منفذ (Quota Limit)
+                </span>
               </div>
 
               {aiStatus.status !== 'idle' && (

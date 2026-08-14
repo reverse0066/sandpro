@@ -243,6 +243,7 @@ app.get("/api/check-ai-status", async (req, res) => {
     if (!apiKey) {
       return res.json({
         status: 'missing_key',
+        quotaLevel: 'warning',
         isQuotaAvailable: false,
         message: 'مفتاح GEMINI_API_KEY غير متوفر في بيئة التشغيل.'
       });
@@ -261,6 +262,7 @@ app.get("/api/check-ai-status", async (req, res) => {
     if (response && response.text) {
       return res.json({
         status: 'ok',
+        quotaLevel: 'sufficient',
         isQuotaAvailable: true,
         message: 'حالة الرصيد والخدمة ممتازة وجاهزة للاستخدام بدون أي انقطاع.',
         model: 'gemini-3.7-flash',
@@ -269,6 +271,7 @@ app.get("/api/check-ai-status", async (req, res) => {
     } else {
       return res.json({
         status: 'ok',
+        quotaLevel: 'sufficient',
         isQuotaAvailable: true,
         message: 'خدمة الذكاء الاصطناعي متصلة وبحالة جيدة.',
         model: 'gemini-3.7-flash',
@@ -284,6 +287,7 @@ app.get("/api/check-ai-status", async (req, res) => {
     if (isQuotaError) {
       return res.json({
         status: 'quota_exceeded',
+        quotaLevel: 'exhausted',
         isQuotaAvailable: false,
         message: '⚠️ نفاد رصيد أو حصة الاستخدام المتاحة للذكاء الاصطناعي (Quota Limit Reached / 429). يرجى التحقق من الحساب أو المحاولة لاحقاً.',
         rawError: rawMsg
@@ -291,6 +295,7 @@ app.get("/api/check-ai-status", async (req, res) => {
     } else if (isHighDemand) {
       return res.json({
         status: 'high_demand',
+        quotaLevel: 'warning',
         isQuotaAvailable: true,
         message: '⚡ حالة الرصيد ممتازة، ولكن الخدمة تشهد ضغطاً إقليمياً مؤقتاً (503). ستقوم أتمتة النظام بالتحويل للنماذج الاحتياطية تلقائياً.',
         rawError: rawMsg
@@ -298,6 +303,7 @@ app.get("/api/check-ai-status", async (req, res) => {
     } else {
       return res.json({
         status: 'error',
+        quotaLevel: 'warning',
         isQuotaAvailable: false,
         message: `تعذر الاتصال بالخدمة: ${formatGeminiError(error)}`,
         rawError: rawMsg
